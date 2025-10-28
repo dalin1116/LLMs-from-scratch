@@ -1,0 +1,494 @@
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                    GPT-2 124M MODEL - DETAILED LAYER STRUCTURE                                ║
+║                                           WITH PARAMETER COUNTS                                                ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                              INPUT LAYER                                                      │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+                                         Input: Token IDs
+                                    Shape: [batch_size, seq_len]
+                                              │
+                                              │
+                    ┌─────────────────────────┴─────────────────────────┐
+                    │                                                   │
+                    ▼                                                   ▼
+        ╔═══════════════════════════╗                     ╔═══════════════════════════╗
+        ║   TOKEN EMBEDDING LAYER   ║                     ║  POSITION EMBEDDING LAYER ║
+        ╠═══════════════════════════╣                     ╠═══════════════════════════╣
+        ║  Input:  [B, L]           ║                     ║  Input:  [L]              ║
+        ║  Output: [B, L, 768]      ║                     ║  Output: [L, 768]         ║
+        ║                           ║                     ║                           ║
+        ║  Vocab Size:    50,257    ║                     ║  Context Length:  1,024   ║
+        ║  Embedding Dim:    768    ║                     ║  Embedding Dim:     768   ║
+        ║                           ║                     ║                           ║
+        ║  Matrix: [50257 × 768]    ║                     ║  Matrix: [1024 × 768]     ║
+        ║                           ║                     ║                           ║
+        ║  Parameters: 38,597,376   ║                     ║  Parameters:    786,432   ║
+        ╚═══════════════════════════╝                     ╚═══════════════════════════╝
+                    │                                                   │
+                    │                                                   │
+                    └─────────────────────────┬─────────────────────────┘
+                                              │
+                                              ▼
+                                     ┌─────────────────┐
+                                     │  ELEMENT-WISE   │
+                                     │      ADD (+)    │
+                                     └────────┬────────┘
+                                              │
+                                              ▼
+                                   Shape: [B, L, 768]
+                                              │
+                                              ▼
+                                   ╔═══════════════════╗
+                                   ║  DROPOUT (p=0.1)  ║
+                                   ║                   ║
+                                   ║  Parameters: 0    ║
+                                   ╚═════════┬═════════╝
+                                             │
+                                             │
+                                             ▼
+
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                      TRANSFORMER BLOCK #1                                                     ║
+║                                    (Repeated 12 times: #1 ~ #12)                                              ║
+║                                   Block Parameters: 7,085,568                                                 ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+                                    Input: [B, L, 768]
+                                             │
+                                             │
+                    ┌────────────────────────┴────────────────────┐
+                    │                                             │ (Shortcut Connection #1)
+                    │                                             │
+                    ▼                                             │
+        ╔═══════════════════════════════════════════╗             │
+        ║         LAYER NORMALIZATION #1            ║             │
+        ╠═══════════════════════════════════════════╣             │
+        ║  Input:  [B, L, 768]                      ║             │
+        ║  Output: [B, L, 768]                      ║             │
+        ║                                           ║             │
+        ║  scale (γ): [768]         768 params      ║             │
+        ║  shift (β): [768]         768 params      ║             │
+        ║                                           ║             │
+        ║  Total Parameters: 1,536                  ║             │
+        ╚═══════════════════════════════════════════╝             │
+                    │                                             │
+                    ▼                                             │
+        ╔═══════════════════════════════════════════════════════════════════╗
+        ║              MULTI-HEAD ATTENTION (12 heads)                      ║
+        ╠═══════════════════════════════════════════════════════════════════╣
+        ║  Input:  [B, L, 768]                                              ║
+        ║  Output: [B, L, 768]                                              ║
+        ║                                                                   ║
+        ║  ┌─────────────────────────────────────────────────────────────┐ ║
+        ║  │  QUERY PROJECTION (W_q)                                     │ ║
+        ║  │  Weight: [768 × 768]                    589,824 params      │ ║
+        ║  │  Output: [B, L, 768] → [B, 12, L, 64]                      │ ║
+        ║  └─────────────────────────────────────────────────────────────┘ ║
+        ║                                                                   ║
+        ║  ┌─────────────────────────────────────────────────────────────┐ ║
+        ║  │  KEY PROJECTION (W_k)                                       │ ║
+        ║  │  Weight: [768 × 768]                    589,824 params      │ ║
+        ║  │  Output: [B, L, 768] → [B, 12, L, 64]                      │ ║
+        ║  └─────────────────────────────────────────────────────────────┘ ║
+        ║                                                                   ║
+        ║  ┌─────────────────────────────────────────────────────────────┐ ║
+        ║  │  VALUE PROJECTION (W_v)                                     │ ║
+        ║  │  Weight: [768 × 768]                    589,824 params      │ ║
+        ║  │  Output: [B, L, 768] → [B, 12, L, 64]                      │ ║
+        ║  └─────────────────────────────────────────────────────────────┘ ║
+        ║                                                                   ║
+        ║  ┌─────────────────────────────────────────────────────────────┐ ║
+        ║  │  ATTENTION COMPUTATION                                      │ ║
+        ║  │  Q @ K^T: [B, 12, L, 64] @ [B, 12, 64, L]                  │ ║
+        ║  │  → [B, 12, L, L] (attention scores)                        │ ║
+        ║  │                                                             │ ║
+        ║  │  Scale by 1/√64 = 1/8                                      │ ║
+        ║  │  Apply Causal Mask (upper triangle = -inf)                 │ ║
+        ║  │  Softmax along last dimension                              │ ║
+        ║  │  Dropout (p=0.1)                                           │ ║
+        ║  │                                                             │ ║
+        ║  │  Attention @ V: [B, 12, L, L] @ [B, 12, L, 64]            │ ║
+        ║  │  → [B, 12, L, 64]                                          │ ║
+        ║  └─────────────────────────────────────────────────────────────┘ ║
+        ║                                                                   ║
+        ║  ┌─────────────────────────────────────────────────────────────┐ ║
+        ║  │  CONCATENATE HEADS                                          │ ║
+        ║  │  [B, 12, L, 64] → [B, L, 768]                              │ ║
+        ║  └─────────────────────────────────────────────────────────────┘ ║
+        ║                                                                   ║
+        ║  ┌─────────────────────────────────────────────────────────────┐ ║
+        ║  │  OUTPUT PROJECTION (W_o)                                    │ ║
+        ║  │  Weight: [768 × 768]                    589,824 params      │ ║
+        ║  │  Bias:   [768]                              768 params      │ ║
+        ║  │  Output: [B, L, 768]                                        │ ║
+        ║  └─────────────────────────────────────────────────────────────┘ ║
+        ║                                                                   ║
+        ║  Total Multi-Head Attention Parameters: 2,360,064                 ║
+        ╚═══════════════════════════════════════════════════════════════════╝
+                    │
+                    ▼
+        ╔═══════════════════════════╗
+        ║  DROPOUT (p=0.1)          ║
+        ║                           ║
+        ║  Parameters: 0            ║
+        ╚═══════════════════════════╝
+                    │
+                    ▼
+                ┌───────┐
+                │  ADD  │ ◄──────────────────────────────────────────┘
+                │  (+)  │         (Residual Connection #1)
+                └───┬───┘
+                    │
+                    ▼
+              [B, L, 768]
+                    │
+                    │
+    ┌───────────────┴───────────────┐
+    │                               │ (Shortcut Connection #2)
+    │                               │
+    ▼                               │
+╔═══════════════════════════════════════════╗
+║         LAYER NORMALIZATION #2            ║
+╠═══════════════════════════════════════════╣
+║  Input:  [B, L, 768]                      ║
+║  Output: [B, L, 768]                      ║
+║                                           ║
+║  scale (γ): [768]         768 params      ║
+║  shift (β): [768]         768 params      ║
+║                                           ║
+║  Total Parameters: 1,536                  ║
+╚═══════════════════════════════════════════╝
+    │                                       │
+    ▼                                       │
+╔═══════════════════════════════════════════════════════════════════╗
+║                    FEED FORWARD NETWORK                           ║
+╠═══════════════════════════════════════════════════════════════════╣
+║  Input:  [B, L, 768]                                              ║
+║  Output: [B, L, 768]                                              ║
+║                                                                   ║
+║  ┌─────────────────────────────────────────────────────────────┐ ║
+║  │  LINEAR LAYER #1 (Expansion)                                │ ║
+║  │  Weight: [768 × 3072]               2,359,296 params        │ ║
+║  │  Bias:   [3072]                          3,072 params        │ ║
+║  │  Output: [B, L, 3072]                                        │ ║
+║  └─────────────────────────────────────────────────────────────┘ ║
+║                            │                                       ║
+║                            ▼                                       ║
+║  ┌─────────────────────────────────────────────────────────────┐ ║
+║  │  GELU ACTIVATION                                            │ ║
+║  │  GELU(x) = 0.5·x·(1 + tanh[√(2/π)·(x + 0.044715·x³)])      │ ║
+║  │  Element-wise operation                                      │ ║
+║  │  Output: [B, L, 3072]                                        │ ║
+║  │                                                             │ ║
+║  │  Parameters: 0                                              │ ║
+║  └─────────────────────────────────────────────────────────────┘ ║
+║                            │                                       ║
+║                            ▼                                       ║
+║  ┌─────────────────────────────────────────────────────────────┐ ║
+║  │  LINEAR LAYER #2 (Compression)                              │ ║
+║  │  Weight: [3072 × 768]               2,359,296 params        │ ║
+║  │  Bias:   [768]                            768 params        │ ║
+║  │  Output: [B, L, 768]                                        │ ║
+║  └─────────────────────────────────────────────────────────────┘ ║
+║                                                                   ║
+║  Total Feed Forward Parameters: 4,722,432                         ║
+╚═══════════════════════════════════════════════════════════════════╝
+    │
+    ▼
+╔═══════════════════════════╗
+║  DROPOUT (p=0.1)          ║
+║                           ║
+║  Parameters: 0            ║
+╚═══════════════════════════╝
+    │
+    ▼
+┌───────┐
+│  ADD  │ ◄──────────────────────────────────────────┘
+│  (+)  │         (Residual Connection #2)
+└───┬───┘
+    │
+    ▼
+[B, L, 768]
+    │
+    │
+    │ ════════════════════════════════════════════════════════════════
+    │              END OF SINGLE TRANSFORMER BLOCK
+    │            Total Parameters: 7,085,568
+    │ ════════════════════════════════════════════════════════════════
+    │
+    │
+    ▼
+
+    ╔════════════════════════════════════════╗
+    ║  TRANSFORMER BLOCK #2                  ║
+    ║  (Identical structure to Block #1)     ║
+    ║  Parameters: 7,085,568                 ║
+    ╚════════════════════════════════════════╝
+                    │
+                    ▼
+    ╔════════════════════════════════════════╗
+    ║  TRANSFORMER BLOCK #3                  ║
+    ║  Parameters: 7,085,568                 ║
+    ╚════════════════════════════════════════╝
+                    │
+                    ▼
+                   ...
+                    │
+                    ▼
+    ╔════════════════════════════════════════╗
+    ║  TRANSFORMER BLOCK #12                 ║
+    ║  Parameters: 7,085,568                 ║
+    ╚════════════════════════════════════════╝
+                    │
+                    │
+                    ▼
+
+        ╔═══════════════════════════════════════════╗
+        ║       FINAL LAYER NORMALIZATION           ║
+        ╠═══════════════════════════════════════════╣
+        ║  Input:  [B, L, 768]                      ║
+        ║  Output: [B, L, 768]                      ║
+        ║                                           ║
+        ║  scale (γ): [768]         768 params      ║
+        ║  shift (β): [768]         768 params      ║
+        ║                                           ║
+        ║  Total Parameters: 1,536                  ║
+        ╚═══════════════════════════════════════════╝
+                    │
+                    ▼
+        ╔═══════════════════════════════════════════╗
+        ║            OUTPUT HEAD                    ║
+        ╠═══════════════════════════════════════════╣
+        ║  Input:  [B, L, 768]                      ║
+        ║  Output: [B, L, 50257]                    ║
+        ║                                           ║
+        ║  Weight: [768 × 50257]   38,597,376       ║
+        ║  Bias:   None (bias=False)                ║
+        ║                                           ║
+        ║  Total Parameters: 38,597,376             ║
+        ║                                           ║
+        ║  NOTE: In original GPT-2 with Weight      ║
+        ║  Tying, this shares weights with Token    ║
+        ║  Embedding, saving 38.6M parameters       ║
+        ╚═══════════════════════════════════════════╝
+                    │
+                    ▼
+                  LOGITS
+            [B, L, 50257]
+
+
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                        PARAMETER SUMMARY TABLE                                                ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────┬──────────────────────────────┬───────────────┬────────────────┐
+│ Component                                     │ Structure                    │ Parameters    │ % of Total     │
+├───────────────────────────────────────────────┼──────────────────────────────┼───────────────┼────────────────┤
+│ Token Embedding                               │ [50257 × 768]                │  38,597,376   │  23.67%        │
+│ Position Embedding                            │ [1024 × 768]                 │     786,432   │   0.48%        │
+├───────────────────────────────────────────────┼──────────────────────────────┼───────────────┼────────────────┤
+│ Transformer Block #1-#12 (each block):        │                              │               │                │
+│   ├─ LayerNorm #1                             │ scale[768] + shift[768]      │       1,536   │   0.00%        │
+│   ├─ Multi-Head Attention:                    │                              │               │                │
+│   │   ├─ W_query                              │ [768 × 768]                  │     589,824   │   0.36%        │
+│   │   ├─ W_key                                │ [768 × 768]                  │     589,824   │   0.36%        │
+│   │   ├─ W_value                              │ [768 × 768]                  │     589,824   │   0.36%        │
+│   │   └─ out_proj                             │ [768 × 768] + bias[768]      │     590,592   │   0.36%        │
+│   ├─ LayerNorm #2                             │ scale[768] + shift[768]      │       1,536   │   0.00%        │
+│   └─ Feed Forward:                            │                              │               │                │
+│       ├─ Linear1                              │ [768 × 3072] + bias[3072]    │   2,362,368   │   1.45%        │
+│       └─ Linear2                              │ [3072 × 768] + bias[768]     │   2,360,064   │   1.45%        │
+│                                               │                              │               │                │
+│   Single Block Total:                         │                              │   7,085,568   │   4.35%        │
+│   All 12 Blocks Total:                        │                              │  85,026,816   │  52.15%        │
+├───────────────────────────────────────────────┼──────────────────────────────┼───────────────┼────────────────┤
+│ Final LayerNorm                               │ scale[768] + shift[768]      │       1,536   │   0.00%        │
+│ Output Head                                   │ [768 × 50257], no bias       │  38,597,376   │  23.67%        │
+├───────────────────────────────────────────────┼──────────────────────────────┼───────────────┼────────────────┤
+│ TOTAL (Without Weight Tying):                 │                              │ 163,009,536   │ 100.00%        │
+│ TOTAL (With Weight Tying):                    │                              │ 124,412,160   │  76.33%        │
+└───────────────────────────────────────────────┴──────────────────────────────┴───────────────┴────────────────┘
+
+
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                      DIMENSION FLOW THROUGH MODEL                                             ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+Layer Name                                        Input Dimension              Output Dimension
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Input Token IDs                                   [B, L]                       [B, L]
+
+Token Embedding                                   [B, L]                       [B, L, 768]
+Position Embedding                                [L]                          [L, 768] → broadcast to [B, L, 768]
+Element-wise Add                                  [B, L, 768] + [B, L, 768]    [B, L, 768]
+Embedding Dropout                                 [B, L, 768]                  [B, L, 768]
+
+─────────────────────────────── TRANSFORMER BLOCK #1 ───────────────────────────────────────────────────────────
+
+LayerNorm #1                                      [B, L, 768]                  [B, L, 768]
+
+Multi-Head Attention:
+  ├─ Query Projection                             [B, L, 768]                  [B, L, 768]
+  ├─ Key Projection                               [B, L, 768]                  [B, L, 768]
+  ├─ Value Projection                             [B, L, 768]                  [B, L, 768]
+  ├─ Reshape to Multi-Head                        [B, L, 768]                  [B, 12, L, 64]
+  ├─ Attention Scores (Q @ K^T)                   [B, 12, L, 64] @ [B, 12, 64, L]  → [B, 12, L, L]
+  ├─ Softmax                                      [B, 12, L, L]                [B, 12, L, L]
+  ├─ Attention Output (Attn @ V)                  [B, 12, L, L] @ [B, 12, L, 64]   → [B, 12, L, 64]
+  ├─ Concatenate Heads                            [B, 12, L, 64]               [B, L, 768]
+  └─ Output Projection                            [B, L, 768]                  [B, L, 768]
+
+Dropout                                           [B, L, 768]                  [B, L, 768]
+Residual Add                                      [B, L, 768] + [B, L, 768]    [B, L, 768]
+
+LayerNorm #2                                      [B, L, 768]                  [B, L, 768]
+
+Feed Forward Network:
+  ├─ Linear #1 (Expansion)                        [B, L, 768]                  [B, L, 3072]
+  ├─ GELU Activation                              [B, L, 3072]                 [B, L, 3072]
+  └─ Linear #2 (Compression)                      [B, L, 3072]                 [B, L, 768]
+
+Dropout                                           [B, L, 768]                  [B, L, 768]
+Residual Add                                      [B, L, 768] + [B, L, 768]    [B, L, 768]
+
+─────────────────────────────── TRANSFORMER BLOCKS #2 ~ #12 ─────────────────────────────────────────────────────
+(Each block has identical structure and dimensions)                             [B, L, 768] → [B, L, 768]
+
+─────────────────────────────────── OUTPUT LAYERS ───────────────────────────────────────────────────────────────
+
+Final LayerNorm                                   [B, L, 768]                  [B, L, 768]
+Output Head (Linear)                              [B, L, 768]                  [B, L, 50257]
+
+Final Output Logits                               [B, L, 50257]                [B, L, 50257]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Legend: B = batch_size, L = sequence_length
+
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                        KEY ARCHITECTURAL FEATURES                                             ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+1. RESIDUAL CONNECTIONS (Shortcut Connections):
+   ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │ • Two residual connections per Transformer block                                                        │
+   │ • Total: 24 residual connections (12 blocks × 2)                                                        │
+   │ • Purpose: Enable gradient flow in deep networks, prevent vanishing gradients                           │
+   │ • Pattern: output = F(x) + x, where F is the sub-layer (attention or feed-forward)                     │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+2. LAYER NORMALIZATION:
+   ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │ • Pre-Norm architecture: LayerNorm applied BEFORE sub-layers                                            │
+   │ • Formula: LN(x) = γ · (x - μ) / √(σ² + ε) + β                                                         │
+   │ • Normalizes across the feature dimension (768), per sample, per token                                  │
+   │ • γ (scale) and β (shift) are learnable parameters                                                      │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+3. MULTI-HEAD ATTENTION MECHANISM:
+   ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │ • 12 parallel attention heads                                                                            │
+   │ • Each head: 64 dimensions (768 / 12 = 64)                                                              │
+   │ • Scaled dot-product attention: Attention(Q,K,V) = softmax(QK^T / √d_k) V                              │
+   │ • Causal masking: prevents attending to future positions                                                │
+   │ • All heads process in parallel, then concatenated                                                      │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+4. FEED FORWARD NETWORK:
+   ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │ • Two-layer MLP with 4× expansion ratio                                                                  │
+   │ • Pattern: Linear(768 → 3072) → GELU → Linear(3072 → 768)                                              │
+   │ • GELU activation: smoother than ReLU, non-zero gradient for negative values                            │
+   │ • Processes each position independently (position-wise)                                                  │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+5. DROPOUT REGULARIZATION:
+   ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │ • Applied at 4 locations per block:                                                                      │
+   │   - After token+position embeddings                                                                      │
+   │   - After attention output projection                                                                    │
+   │   - Within attention (after softmax)                                                                     │
+   │   - After feed-forward network                                                                           │
+   │ • Drop rate: 0.1 (10% of neurons randomly dropped during training)                                      │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+6. POSITIONAL ENCODING:
+   ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │ • Learned positional embeddings (not sinusoidal like original Transformer)                              │
+   │ • Each position (0 to 1023) has a unique learnable 768-dim vector                                       │
+   │ • Added to token embeddings to provide position information                                              │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+7. CAUSAL MASKING:
+   ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │ • Upper triangular mask applied to attention scores                                                      │
+   │ • Prevents position i from attending to positions j > i                                                  │
+   │ • Ensures autoregressive property: predicts next token using only previous tokens                        │
+   │ • Implementation: masked positions set to -∞ before softmax                                              │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                   COMPUTATIONAL COMPLEXITY ANALYSIS                                           ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+Per Token Forward Pass (assuming batch_size=1, seq_len=L):
+
+┌────────────────────────────────┬──────────────────────────────────────┬──────────────────────────────────────┐
+│ Operation                      │ Complexity                           │ Notes                                │
+├────────────────────────────────┼──────────────────────────────────────┼──────────────────────────────────────┤
+│ Token Embedding Lookup         │ O(L)                                 │ Simple table lookup                  │
+│ Position Embedding Lookup      │ O(L)                                 │ Simple table lookup                  │
+├────────────────────────────────┼──────────────────────────────────────┼──────────────────────────────────────┤
+│ Per Transformer Block:         │                                      │                                      │
+│   LayerNorm                    │ O(L × 768)                           │ Mean/variance + normalize            │
+│   Q, K, V Projections          │ O(L × 768 × 768) each                │ Matrix multiplication × 3            │
+│   Attention Scores (Q @ K^T)   │ O(L² × 768)                          │ Quadratic in sequence length!        │
+│   Attention @ V                │ O(L² × 768)                          │ Quadratic in sequence length!        │
+│   Output Projection            │ O(L × 768 × 768)                     │ Matrix multiplication                │
+│   Feed Forward Layer 1         │ O(L × 768 × 3072)                    │ Matrix multiplication                │
+│   Feed Forward Layer 2         │ O(L × 3072 × 768)                    │ Matrix multiplication                │
+├────────────────────────────────┼──────────────────────────────────────┼──────────────────────────────────────┤
+│ Output Head                    │ O(L × 768 × 50257)                   │ Largest single operation!            │
+└────────────────────────────────┴──────────────────────────────────────┴──────────────────────────────────────┘
+
+Key Insight:
+• Attention mechanism has O(L²) complexity → becomes bottleneck for long sequences
+• This is why context length is limited to 1024 tokens in GPT-2
+• Modern models use sparse attention, flash attention, etc. to reduce this
+
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                              FINAL SUMMARY                                                    ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                               │
+│  Model: GPT-2 124M (Small)                                                                                    │
+│                                                                                                               │
+│  Total Layers: 12 Transformer Blocks                                                                          │
+│                                                                                                               │
+│  Parameters:                                                                                                  │
+│    • Without Weight Tying: 163,009,536 (163.01M)                                                             │
+│    • With Weight Tying:    124,412,160 (124.41M) ← Official GPT-2 count                                      │
+│                                                                                                               │
+│  Memory Footprint (with weight tying):                                                                        │
+│    • float32: 474.70 MB                                                                                       │
+│    • float16: 237.35 MB                                                                                       │
+│    • int8:    118.68 MB                                                                                       │
+│                                                                                                               │
+│  Architecture Highlights:                                                                                     │
+│    • Decoder-only transformer (GPT architecture)                                                              │
+│    • Causal (autoregressive) attention mask                                                                   │
+│    • Pre-normalization (LayerNorm before sub-layers)                                                          │
+│    • Learned positional embeddings                                                                            │
+│    • 12 attention heads per layer                                                                             │
+│    • 4× MLP expansion ratio (768 → 3072 → 768)                                                               │
+│    • GELU activation function                                                                                 │
+│    • 0.1 dropout rate throughout                                                                              │
+│                                                                                                               │
+│  Context Length: 1024 tokens                                                                                  │
+│  Vocabulary Size: 50,257 tokens (BPE)                                                                         │
+│                                                                                                               │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
